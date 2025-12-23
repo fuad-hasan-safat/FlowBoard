@@ -88,7 +88,7 @@ export const updateTaskHandler = async (
     const { projectId, taskId } = req.params;
 
     const parsed = updateTaskSchema.parse(req.body);
-    const task = await updateTask(orgId, projectId, taskId, parsed);
+    const task = await updateTask(orgId, projectId, taskId, req.user?.userId as string, parsed);
 
     res.json(task);
   } catch (err) {
@@ -109,7 +109,7 @@ export const deleteTaskHandler = async (
     const { orgId } = req.orgMembership;
     const { projectId, taskId } = req.params;
 
-    const task = await deleteTask(orgId, projectId, taskId);
+    const task = await deleteTask(orgId, projectId, taskId, req.user?.userId as string);
 
     res.json({ message: "Task deleted", taskId: task._id });
   } catch (err) {

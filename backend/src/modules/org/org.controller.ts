@@ -1,11 +1,21 @@
 import { Request, Response, NextFunction } from "express";
 import { createOrgSchema } from "./org.schema";
-import { createOrganization, getUserOrganizations, getOrganizationForUser } from "./org.service";
+import {
+  createOrganization,
+  getUserOrganizations,
+  getOrganizationForUser,
+} from "./org.service";
 import { OrgMember } from "../../models/OrgMember";
 import { TaskComment } from "../../models/TaskComment";
 import { getIO } from "../../socket";
+import { logActivity } from "../../utils/activityLogger";
+import { Activity } from "../../models/Activity";
 
-export const createOrgHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const createOrgHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -16,14 +26,18 @@ export const createOrgHandler = async (req: Request, res: Response, next: NextFu
 
     res.status(201).json({
       orgId: org._id,
-      name: org.name
+      name: org.name,
     });
   } catch (err) {
     next(err);
   }
 };
 
-export const listUserOrgsHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const listUserOrgsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -36,7 +50,11 @@ export const listUserOrgsHandler = async (req: Request, res: Response, next: Nex
   }
 };
 
-export const getOrgHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const getOrgHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -87,7 +105,7 @@ export const listTaskComments = async (req: Request, res: Response) => {
   const comments = await TaskComment.find({
     orgId,
     projectId,
-    taskId
+    taskId,
   })
     .populate("authorId", "name email")
     .sort({ createdAt: 1 });
@@ -108,7 +126,7 @@ export const createTaskComment = async (req: Request, res: Response) => {
     projectId,
     taskId,
     authorId: req.user!.userId,
-    content
+    content,
   });
 
   // 🔴 realtime emit
@@ -116,6 +134,25 @@ export const createTaskComment = async (req: Request, res: Response) => {
     .to(`org:${orgId}:project:${projectId}`)
     .emit("task:comment:created", comment);
 
+  await logActivity({
+    orgId,
+    projectId,
+    taskId,
+    actorId: req.user!.userId,
+    type: "COMMENT_ADDED",
+  });
+
   res.status(201).json(comment);
+};
+
+export const listOrgActivity = async (req: Request, res: Response) => {
+  const { orgId } = req.params;
+
+  const activity = await Activity.find({ orgId })
+    .populate("actorId", "name email")
+    .sort({ createdAt: -1 })
+    .limit(100);
+
+  res.json(activity);
 };
 

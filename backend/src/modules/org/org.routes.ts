@@ -7,6 +7,7 @@ import {
   removeOrgMemberHandler,
   listTaskComments,
   createTaskComment,
+  listOrgActivity,
 } from "./org.controller";
 import { requireAuth } from "../../middleware/authMiddleware";
 import { requireOrgMemberMiddleware } from "../../middleware/orgMiddleware";
@@ -46,5 +47,11 @@ router.post(
   createTaskComment
 );
 
+router.get(
+  "/:orgId/activity",
+  requireAuth,
+  requireOrgMemberMiddleware(),
+  listOrgActivity
+);
 
 export default router;

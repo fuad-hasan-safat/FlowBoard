@@ -10,6 +10,7 @@ import ProjectBoardPage from "./pages/dashboard/ProjectBoardPage";
 import InvitesPage from "./pages/invites/InvitesPage";
 import InviteMemberPage from "./pages/org/InviteMemberPage";
 import MembersPage from "./pages/org/MembersPage";
+import ActivityFeed from "./pages/org/ActivityFeed";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((s) => s.user);
@@ -39,8 +40,7 @@ export default function App() {
         <Route path="invites" element={<InvitesPage />} />
         <Route path="org/invite" element={<InviteMemberPage />} />
         <Route path="org/members" element={<MembersPage />} />
-
-        {/* later: /app/projects/:projectId */}
+        <Route path="activity" element={<ActivityFeed />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />
