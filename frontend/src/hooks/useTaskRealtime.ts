@@ -44,6 +44,12 @@ export default function useTaskRealtime(
     socket.on("task:updated", onUpdated);
     socket.on("task:deleted", onDeleted);
 
+    socket.on("task:comment:created", (comment) => {
+      queryClient.invalidateQueries({
+        queryKey: ["comments", orgId, projectId, comment.taskId],
+      });
+    });
+
     return () => {
       socket.emit("leaveRoom", room);
       socket.off("task:created", onCreated);

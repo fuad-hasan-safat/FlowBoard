@@ -5,6 +5,8 @@ import {
   getOrgHandler,
   listOrgMembersHandler,
   removeOrgMemberHandler,
+  listTaskComments,
+  createTaskComment,
 } from "./org.controller";
 import { requireAuth } from "../../middleware/authMiddleware";
 import { requireOrgMemberMiddleware } from "../../middleware/orgMiddleware";
@@ -29,5 +31,20 @@ router.delete(
   requireOrgMemberMiddleware(["OWNER"]),
   removeOrgMemberHandler
 );
+
+router.get(
+  "/:orgId/projects/:projectId/tasks/:taskId/comments",
+  requireAuth,
+  requireOrgMemberMiddleware(),
+  listTaskComments
+);
+
+router.post(
+  "/:orgId/projects/:projectId/tasks/:taskId/comments",
+  requireAuth,
+  requireOrgMemberMiddleware(),
+  createTaskComment
+);
+
 
 export default router;

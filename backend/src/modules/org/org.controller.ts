@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { createOrgSchema } from "./org.schema";
 import { createOrganization, getUserOrganizations, getOrganizationForUser } from "./org.service";
 import { OrgMember } from "../../models/OrgMember";
+import { TaskComment } from "../../models/TaskComment";
+import { getIO } from "../../socket";
 
 export const createOrgHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -79,4 +81,41 @@ export const removeOrgMemberHandler = async (req: Request, res: Response) => {
   res.json({ success: true });
 };
 
+export const listTaskComments = async (req: Request, res: Response) => {
+  const { orgId, projectId, taskId } = req.params;
+
+  const comments = await TaskComment.find({
+    orgId,
+    projectId,
+    taskId
+  })
+    .populate("authorId", "name email")
+    .sort({ createdAt: 1 });
+
+  res.json(comments);
+};
+
+export const createTaskComment = async (req: Request, res: Response) => {
+  const { orgId, projectId, taskId } = req.params;
+  const { content } = req.body;
+
+  if (!content?.trim()) {
+    return res.status(400).json({ message: "Comment cannot be empty" });
+  }
+
+  const comment = await TaskComment.create({
+    orgId,
+    projectId,
+    taskId,
+    authorId: req.user!.userId,
+    content
+  });
+
+  // 🔴 realtime emit
+  getIO()
+    .to(`org:${orgId}:project:${projectId}`)
+    .emit("task:comment:created", comment);
+
+  res.status(201).json(comment);
+};
 
