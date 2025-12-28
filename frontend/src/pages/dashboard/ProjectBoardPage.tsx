@@ -17,7 +17,7 @@ import {
 } from "@hello-pangea/dnd";
 import { useMemo, useState, type FormEvent } from "react";
 import TaskModal from "../../components/TaskModal";
-import useTaskRealtime from "../../hooks/useTaskRealtime"; // 🔴 NEW
+import { useTaskRealtime } from "../../hooks/useTaskRealtime";
 
 const STATUS_COLUMNS: { id: TaskStatus; title: string }[] = [
   { id: "BACKLOG", title: "Backlog" },

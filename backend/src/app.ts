@@ -10,6 +10,7 @@ import { requireOrgMemberMiddleware } from "./middleware/orgMiddleware";
 import projectRoutes from "./modules/project/project.routes";
 import taskRoutes from "./modules/tasks/task.routes";
 import inviteRoutes from "./modules/invite/invite.route";
+import notificationRoutes from "./modules/notification/notification.routes";
 
 
 const app = express();
@@ -21,6 +22,7 @@ app.use(json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/orgs", orgRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use(
   "/api/orgs/:orgId/projects",

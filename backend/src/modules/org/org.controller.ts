@@ -10,6 +10,9 @@ import { TaskComment } from "../../models/TaskComment";
 import { getIO } from "../../socket";
 import { logActivity } from "../../utils/activityLogger";
 import { Activity } from "../../models/Activity";
+import { createNotification } from "../../utils/notificationService";
+import { Task } from "../../models/Task";
+import { User } from "../../models/User";
 
 export const createOrgHandler = async (
   req: Request,
@@ -121,6 +124,11 @@ export const createTaskComment = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "Comment cannot be empty" });
   }
 
+  const task = await Task.findOne({ _id: taskId, orgId, projectId });
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
   const comment = await TaskComment.create({
     orgId,
     projectId,
@@ -129,7 +137,7 @@ export const createTaskComment = async (req: Request, res: Response) => {
     content,
   });
 
-  // 🔴 realtime emit
+  // 🔴 realtime emit (project room)
   getIO()
     .to(`org:${orgId}:project:${projectId}`)
     .emit("task:comment:created", comment);
@@ -140,6 +148,14 @@ export const createTaskComment = async (req: Request, res: Response) => {
     taskId,
     actorId: req.user!.userId,
     type: "COMMENT_ADDED",
+  });
+  const user = await User.findById(req.user!.userId).select("name");
+
+  await createNotification({
+    userId: task.createdBy.toString(),
+    orgId,
+    type: "COMMENT",
+    message: `${user?.name ?? "Someone"} commented on "${task.title}"`,
   });
 
   res.status(201).json(comment);
@@ -155,4 +171,3 @@ export const listOrgActivity = async (req: Request, res: Response) => {
 
   res.json(activity);
 };
-

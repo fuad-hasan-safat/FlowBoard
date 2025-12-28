@@ -2,11 +2,14 @@ import { Outlet, Link } from "react-router-dom";
 import { useAuthStore } from "../../store/auth.store";
 import { useOrgStore } from "../../store/org.store";
 import OrgSelector from "../components/dashboard/OrgSelector";
+import NotificationBell from "../../components/NotificationBell";
+import { useNotificationRealtime } from "../../hooks/useNotificationRealtime";
 
 export default function DashboardLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const orgId = useOrgStore((s) => s.orgId);
+  useNotificationRealtime()
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
@@ -52,6 +55,8 @@ export default function DashboardLayout() {
               <div className="font-medium">{user?.name}</div>
               <div className="text-slate-400">{user?.email}</div>
             </div>
+            <NotificationBell />
+
             <button
               onClick={logout}
               className="text-xs border border-slate-700 rounded-md px-2 py-1 hover:bg-slate-800 text-gray-500"
