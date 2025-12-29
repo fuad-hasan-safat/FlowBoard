@@ -31,7 +31,9 @@ const taskSchema = new Schema(
   }
 );
 
+taskSchema.index({ orgId: 1, projectId: 1 });
 taskSchema.index({ projectId: 1, status: 1 });
+taskSchema.index({ assignee: 1 });
 
 export type TaskType = InferSchemaType<typeof taskSchema>;
 export type TaskDocument = HydratedDocument<TaskType>;

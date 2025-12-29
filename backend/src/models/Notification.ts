@@ -43,6 +43,10 @@ const notificationSchema = new Schema(
   { timestamps: true }
 );
 
+notificationSchema.index({ userId: 1, read: 1 });
+notificationSchema.index({ createdAt: -1 });
+
+
 export const Notification = model(
   "Notification",
   notificationSchema
