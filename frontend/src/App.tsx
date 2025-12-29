@@ -11,6 +11,7 @@ import InvitesPage from "./pages/invites/InvitesPage";
 import InviteMemberPage from "./pages/org/InviteMemberPage";
 import MembersPage from "./pages/org/MembersPage";
 import ActivityFeed from "./pages/org/ActivityFeed";
+import NotificationsPage from "./pages/dashboard/NotificationsPage";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((s) => s.user);
@@ -41,6 +42,8 @@ export default function App() {
         <Route path="org/invite" element={<InviteMemberPage />} />
         <Route path="org/members" element={<MembersPage />} />
         <Route path="activity" element={<ActivityFeed />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />

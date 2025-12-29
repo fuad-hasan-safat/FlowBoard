@@ -9,7 +9,7 @@ export default function DashboardLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const orgId = useOrgStore((s) => s.orgId);
-  useNotificationRealtime()
+  useNotificationRealtime();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
@@ -55,7 +55,9 @@ export default function DashboardLayout() {
               <div className="font-medium">{user?.name}</div>
               <div className="text-slate-400">{user?.email}</div>
             </div>
-            <NotificationBell />
+            <Link to="/app/notifications" className="relative hover:text-white">
+              <NotificationBell />
+            </Link>
 
             <button
               onClick={logout}
