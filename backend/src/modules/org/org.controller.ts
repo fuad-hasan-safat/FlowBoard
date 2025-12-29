@@ -151,12 +151,23 @@ export const createTaskComment = async (req: Request, res: Response) => {
   });
   const user = await User.findById(req.user!.userId).select("name");
 
-  await createNotification({
-    userId: task.createdBy.toString(),
-    orgId,
-    type: "COMMENT",
-    message: `${user?.name ?? "Someone"} commented on "${task.title}"`,
-  });
+  const members = await OrgMember.find({ orgId });
+  const recipients = members
+    .map((m) => m.userId.toString())
+    .filter((userId) => userId !== req.user!.userId); // exclude actor
+
+  for (const userId of recipients) {
+    await createNotification({
+      userId,
+      orgId,
+      type: "COMMENT",
+      message: `${req.user!.email} commented on "${task.title}"`,
+      meta: {
+        taskId,
+        projectId,
+      },
+    });
+  }
 
   res.status(201).json(comment);
 };
