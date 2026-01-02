@@ -6,6 +6,7 @@ export type ActivityType =
   | "TASK_UPDATED"
   | "TASK_DELETED"
   | "COMMENT_ADDED"
+  | "TASK_ASSIGNED"
   | "MEMBER_INVITED"
   | "MEMBER_JOINED";
 

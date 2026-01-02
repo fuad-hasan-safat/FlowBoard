@@ -8,6 +8,7 @@ import {
   fetchCommentsApi,
   type TaskComment,
 } from "../api/commentApi";
+import { useCommentRealtime } from "../hooks/useCommentRealTime";
 
 type Props = {
   open: boolean;
@@ -29,22 +30,32 @@ const PRIORITY_OPTIONS: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 // Helper function for priority colors
 const getPriorityColor = (priority: TaskPriority) => {
   switch (priority) {
-    case "LOW": return "border-l-emerald-500 bg-emerald-500/10";
-    case "MEDIUM": return "border-l-blue-500 bg-blue-500/10";
-    case "HIGH": return "border-l-amber-500 bg-amber-500/10";
-    case "URGENT": return "border-l-rose-500 bg-rose-500/10";
-    default: return "border-l-slate-500";
+    case "LOW":
+      return "border-l-emerald-500 bg-emerald-500/10";
+    case "MEDIUM":
+      return "border-l-blue-500 bg-blue-500/10";
+    case "HIGH":
+      return "border-l-amber-500 bg-amber-500/10";
+    case "URGENT":
+      return "border-l-rose-500 bg-rose-500/10";
+    default:
+      return "border-l-slate-500";
   }
 };
 
 // Helper function for status colors
 const getStatusColor = (status: TaskStatus) => {
   switch (status) {
-    case "BACKLOG": return "bg-slate-700";
-    case "IN_PROGRESS": return "bg-blue-600";
-    case "REVIEW": return "bg-purple-600";
-    case "DONE": return "bg-emerald-600";
-    default: return "bg-slate-700";
+    case "BACKLOG":
+      return "bg-slate-700";
+    case "IN_PROGRESS":
+      return "bg-blue-600";
+    case "REVIEW":
+      return "bg-purple-600";
+    case "DONE":
+      return "bg-emerald-600";
+    default:
+      return "bg-slate-700";
   }
 };
 
@@ -63,10 +74,12 @@ export default function TaskModal({
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
 
   const valid = !!orgId && !!projectId && !!task;
   const tasksQueryKey = ["tasks", orgId, projectId];
   const commentsQueryKey = ["comments", orgId, projectId, task?._id];
+  useCommentRealtime(orgId, projectId, task?._id);
 
   /* ------------------ hydrate state ------------------ */
   useEffect(() => {
@@ -76,6 +89,7 @@ export default function TaskModal({
       setDescription(task.description ?? "");
       setStatus(task.status);
       setPriority(task.priority);
+      setAssigneeId(task.assignee ?? null);
     }
   }, [task]);
 
@@ -85,6 +99,24 @@ export default function TaskModal({
     queryFn: () => fetchCommentsApi(orgId!, projectId!, task!._id),
     enabled: valid,
   });
+
+  const { data: members = [] } = useQuery({
+    queryKey: ["orgMembers", orgId],
+    queryFn: async () => {
+      const res = await fetch(
+        `http://localhost:5000/api/orgs/${orgId}/members`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+      return res.json();
+    },
+    enabled: !!orgId,
+  });
+
+  console.log({ members });
 
   /* ------------------ mutations ------------------ */
   const { mutateAsync: updateTask, isPending: isUpdating } = useMutation({
@@ -105,7 +137,9 @@ export default function TaskModal({
             title: newData.title ?? t.title,
             description:
               newData.description !== undefined
-                ? (newData.description === null ? undefined : newData.description)
+                ? newData.description === null
+                  ? undefined
+                  : newData.description
                 : t.description,
             status: newData.status ?? t.status,
             priority: newData.priority ?? t.priority,
@@ -171,13 +205,19 @@ export default function TaskModal({
       description: description.trim() || null,
       status,
       priority,
+      assigneeId: assigneeId
     });
 
     onClose();
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this task? This action cannot be undone.")) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this task? This action cannot be undone."
+      )
+    )
+      return;
     await deleteTask();
     onClose();
   };
@@ -192,20 +232,22 @@ export default function TaskModal({
   return createPortal(
     <>
       {/* Backdrop with fade effect */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 z-40"
         onClick={() => !disabled && onClose()}
       />
-      
+
       {/* Modal Container */}
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div 
+          <div
             className="relative w-full max-w-3xl bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className={`border-l-4 ${getPriorityColor(priority)} px-6 py-4`}>
+            <div
+              className={`border-l-4 ${getPriorityColor(priority)} px-6 py-4`}
+            >
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
                   <input
@@ -216,14 +258,18 @@ export default function TaskModal({
                     placeholder="Task title"
                   />
                   <div className="flex items-center gap-3 mt-2">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(status)} text-white`}>
-                      {status.replace('_', ' ')}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        status
+                      )} text-white`}
+                    >
+                      {status.replace("_", " ")}
                     </span>
                     <span className="text-sm text-gray-400">
-                      {new Date(task.createdAt).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
+                      {new Date(task.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
                       })}
                     </span>
                   </div>
@@ -233,8 +279,18 @@ export default function TaskModal({
                   disabled={disabled}
                   className="ml-4 p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -244,7 +300,9 @@ export default function TaskModal({
             <div className="p-6 space-y-6">
               {/* Description Section */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-300">Description</label>
+                <label className="text-sm font-medium text-gray-300">
+                  Description
+                </label>
                 <textarea
                   className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all min-h-[120px]"
                   value={description}
@@ -252,12 +310,26 @@ export default function TaskModal({
                   disabled={disabled}
                   placeholder="Add a detailed description..."
                 />
+                <select
+                  className="mt-2 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={assigneeId ?? ""}
+                  onChange={(e) => setAssigneeId(e.target.value || null)}
+                >
+                  <option value="">Unassigned</option>
+                  {members.map((m: any) => (
+                    <option key={m.userId._id} value={m.userId._id}>
+                      {m.userId.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Quick Controls */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-300">Status</label>
+                  <label className="text-sm font-medium text-gray-300">
+                    Status
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {STATUS_OPTIONS.map((s) => (
                       <button
@@ -265,19 +337,22 @@ export default function TaskModal({
                         type="button"
                         onClick={() => setStatus(s)}
                         disabled={disabled}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${status === s ? 
-                          `${getStatusColor(s)} text-white` : 
-                          'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          status === s
+                            ? `${getStatusColor(s)} text-white`
+                            : "bg-gray-800 text-gray-300 hover:bg-gray-700"
                         }`}
                       >
-                        {s.replace('_', ' ')}
+                        {s.replace("_", " ")}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-300">Priority</label>
+                  <label className="text-sm font-medium text-gray-300">
+                    Priority
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {PRIORITY_OPTIONS.map((p) => (
                       <button
@@ -285,9 +360,11 @@ export default function TaskModal({
                         type="button"
                         onClick={() => setPriority(p)}
                         disabled={disabled}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${priority === p ? 
-                          getPriorityColor(p) + ' text-white border-transparent' : 
-                          'border-gray-700 text-gray-300 hover:bg-gray-800'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                          priority === p
+                            ? getPriorityColor(p) +
+                              " text-white border-transparent"
+                            : "border-gray-700 text-gray-300 hover:bg-gray-800"
                         }`}
                       >
                         {p}
@@ -300,7 +377,9 @@ export default function TaskModal({
               {/* Comments Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-300">Comments</h3>
+                  <h3 className="text-sm font-semibold text-gray-300">
+                    Comments
+                  </h3>
                   <span className="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded">
                     {comments?.length || 0} comments
                   </span>
@@ -309,22 +388,25 @@ export default function TaskModal({
                 {/* Comments List */}
                 <div className="space-y-4 max-h-72 overflow-y-auto pr-2">
                   {comments?.map((c: TaskComment) => (
-                    <div key={c._id} className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                    <div
+                      key={c._id}
+                      className="bg-gray-800/50 rounded-xl p-4 border border-gray-700"
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-xs font-semibold">
-                            {c.authorId.name?.charAt(0) || 'U'}
+                            {c.authorId.name?.charAt(0) || "U"}
                           </div>
                           <span className="text-sm font-medium text-white">
                             {c.authorId.name}
                           </span>
                         </div>
                         <span className="text-xs text-gray-400">
-                          {new Date(c.createdAt).toLocaleDateString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit',
-                            month: 'short',
-                            day: 'numeric'
+                          {new Date(c.createdAt).toLocaleDateString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            month: "short",
+                            day: "numeric",
                           })}
                         </span>
                       </div>
@@ -334,8 +416,18 @@ export default function TaskModal({
 
                   {!comments?.length && (
                     <div className="text-center py-8 text-gray-500 text-sm">
-                      <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      <svg
+                        className="w-12 h-12 mx-auto mb-3 opacity-50"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1}
+                          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        />
                       </svg>
                       No comments yet. Start the conversation!
                     </div>
@@ -360,16 +452,41 @@ export default function TaskModal({
                     >
                       {isCommenting ? (
                         <>
-                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          <svg
+                            className="w-4 h-4 animate-spin"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
                           </svg>
                           Posting...
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                            />
                           </svg>
                           Post Comment
                         </>
@@ -383,8 +500,18 @@ export default function TaskModal({
               {errorMsg && (
                 <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4">
                   <div className="flex items-center gap-2 text-rose-400 text-sm">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     {errorMsg}
                   </div>
@@ -394,12 +521,23 @@ export default function TaskModal({
               {/* Action Buttons */}
               <div className="flex justify-between items-center pt-6 border-t border-gray-800">
                 <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
-                  Last updated {new Date(task.updatedAt).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                  Last updated{" "}
+                  {new Date(task.updatedAt).toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                 </div>
                 <div className="flex items-center gap-3">
@@ -411,16 +549,41 @@ export default function TaskModal({
                   >
                     {isDeleting ? (
                       <>
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        <svg
+                          className="w-4 h-4 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
                         </svg>
                         Deleting...
                       </>
                     ) : (
                       <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                         Delete Task
                       </>
@@ -443,16 +606,41 @@ export default function TaskModal({
                     >
                       {isUpdating ? (
                         <>
-                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          <svg
+                            className="w-4 h-4 animate-spin"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
                           </svg>
                           Saving...
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                           Save Changes
                         </>

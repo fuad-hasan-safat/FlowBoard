@@ -24,7 +24,7 @@ const taskSchema = new Schema(
     },
     assignee: { type: Schema.Types.ObjectId, ref: "User", default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    dueDate: { type: Date }
+    dueDate: { type: Date, default: null }
   },
   {
     timestamps: true

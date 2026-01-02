@@ -13,11 +13,12 @@ export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
 export const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   status: z.enum(["BACKLOG", "IN_PROGRESS", "REVIEW", "DONE"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
+
   assigneeId: z.string().nullable().optional(),
-  dueDate: z.string().datetime().nullable().optional()
+  dueDate: z.string().nullable().optional()
 });
 
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

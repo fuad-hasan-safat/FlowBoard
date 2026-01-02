@@ -2,16 +2,21 @@ import axiosClient from "./axiosClient";
 
 export type Activity = {
   _id: string;
-  type: string;
-  createdAt: string;
+  orgId: string;
+  projectId?: string;
+  taskId?: string;
   actorId: {
+    _id: string;
     name: string;
     email: string;
   };
-  meta?: Record<string, any>;
+  type: string;
+  createdAt: string;
 };
 
-export const fetchActivityApi = async (orgId: string): Promise<Activity[]> => {
-  const res = await axiosClient.get(`/orgs/${orgId}/activity`);
+export const fetchOrgActivityApi = async (orgId: string) => {
+  const res = await axiosClient.get<Activity[]>(
+    `/orgs/${orgId}/activity`
+  );
   return res.data;
 };

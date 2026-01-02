@@ -138,9 +138,11 @@ export const createTaskComment = async (req: Request, res: Response) => {
   });
 
   // 🔴 realtime emit (project room)
-  getIO()
-    .to(`org:${orgId}:project:${projectId}`)
-    .emit("task:comment:created", comment);
+  // after creating comment
+  getIO().to(`org:${orgId}:project:${projectId}`).emit("task:comment:created", {
+    taskId,
+    projectId,
+  });
 
   await logActivity({
     orgId,
@@ -179,6 +181,8 @@ export const listOrgActivity = async (req: Request, res: Response) => {
     .populate("actorId", "name email")
     .sort({ createdAt: -1 })
     .limit(100);
+
+    getIO().to(`org:${orgId}`).emit("activity:created");
 
   res.json(activity);
 };

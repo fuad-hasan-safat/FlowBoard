@@ -4,6 +4,7 @@ import { useOrgStore } from "../../store/org.store";
 import OrgSelector from "../components/dashboard/OrgSelector";
 import NotificationBell from "../../components/NotificationBell";
 import { useNotificationRealtime } from "../../hooks/useNotificationRealtime";
+import ActivityFeed from "../org/ActivityFeed";
 
 export default function DashboardLayout() {
   const user = useAuthStore((s) => s.user);
@@ -75,7 +76,15 @@ export default function DashboardLayout() {
             Select or create an organization to get started.
           </div>
         )}
-        <Outlet />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3">
+            <Outlet />
+          </div>
+
+          <aside className="lg:col-span-1">
+            <ActivityFeed type="sidebar" />
+          </aside>
+        </div>{" "}
       </main>
     </div>
   );

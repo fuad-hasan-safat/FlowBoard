@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { Task, TaskDocument, TaskType, tasktype } from "../../models/Task";
+import { Task } from "../../models/Task";
 import { Project } from "../../models/Project";
 import { CreateTaskInput, UpdateTaskInput } from "./task.schema";
 import { getIO } from "../../socket";

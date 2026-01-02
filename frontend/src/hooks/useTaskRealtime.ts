@@ -12,34 +12,21 @@ export const useTaskRealtime = (
     if (!orgId || !projectId) return;
 
     const socket = getSocket();
-    const room = `org:${orgId}:project:${projectId}`;
 
-    console.log("CLIENT JOIN ROOM:", room);
-    socket.emit("joinRoom", room);
-
-    socket.on("task:created", () => {
+    const invalidate = () => {
       queryClient.invalidateQueries({
-        queryKey: ["tasks", orgId, projectId]
+        queryKey: ["tasks", orgId, projectId],
       });
-    });
+    };
 
-    socket.on("task:updated", () => {
-      queryClient.invalidateQueries({
-        queryKey: ["tasks", orgId, projectId]
-      });
-    });
-
-    socket.on("task:deleted", () => {
-      queryClient.invalidateQueries({
-        queryKey: ["tasks", orgId, projectId]
-      });
-    });
+    socket.on("task:created", invalidate);
+    socket.on("task:updated", invalidate);
+    socket.on("task:deleted", invalidate);
 
     return () => {
-      socket.emit("leaveRoom", room);
-      socket.off("task:created");
-      socket.off("task:updated");
-      socket.off("task:deleted");
+      socket.off("task:created", invalidate);
+      socket.off("task:updated", invalidate);
+      socket.off("task:deleted", invalidate);
     };
   }, [orgId, projectId, queryClient]);
 };

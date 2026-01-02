@@ -7,6 +7,8 @@ import {
   updateTask,
   deleteTask,
 } from "./task.service";
+import { logActivity } from "../../utils/activityLogger";
+import { createNotification } from "../notification/notification.service";
 
 export const createTaskHandler = async (
   req: Request,
@@ -88,13 +90,46 @@ export const updateTaskHandler = async (
     const { projectId, taskId } = req.params;
 
     const parsed = updateTaskSchema.parse(req.body);
-    const task = await updateTask(orgId, projectId, taskId, req.user?.userId as string, parsed);
+
+    const task = await updateTask(
+      orgId,
+      projectId,
+      taskId,
+      req.user!.userId,
+      parsed
+    );
+
+    // ✅ activity only if assignee was part of update payload
+    if (parsed.assigneeId !== undefined) {
+      await logActivity({
+        orgId,
+        projectId,
+        taskId,
+        actorId: req.user!.userId,
+        type: "TASK_ASSIGNED",
+      });
+    }
+
+    // ✅ notify assignee (if not self)
+    if (
+      parsed.assigneeId &&
+      parsed.assigneeId !== req.user!.userId
+    ) {
+      await createNotification({
+        userId: parsed.assigneeId,
+        orgId,
+        type: "TASK_ASSIGNED",
+        message: `You were assigned to "${task.title}"`,
+        meta: { taskId, projectId },
+      });
+    }
 
     res.json(task);
   } catch (err) {
     next(err);
   }
 };
+
 
 export const deleteTaskHandler = async (
   req: Request,
@@ -109,7 +144,12 @@ export const deleteTaskHandler = async (
     const { orgId } = req.orgMembership;
     const { projectId, taskId } = req.params;
 
-    const task = await deleteTask(orgId, projectId, taskId, req.user?.userId as string);
+    const task = await deleteTask(
+      orgId,
+      projectId,
+      taskId,
+      req.user?.userId as string
+    );
 
     res.json({ message: "Task deleted", taskId: task._id });
   } catch (err) {
