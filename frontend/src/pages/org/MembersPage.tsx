@@ -3,25 +3,26 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchMembersApi,
   removeMemberApi,
-  type OrgMember
+  type OrgMember,
 } from "../../api/memberApi";
+import { useOrgPermissions } from "../../hooks/useOrgPermissions";
 
 export default function MembersPage() {
   const orgId = useOrgStore((s) => s.orgId);
   const queryClient = useQueryClient();
+  const perms = useOrgPermissions();
 
   const { data: members, isLoading } = useQuery({
     queryKey: ["members", orgId],
     queryFn: () => fetchMembersApi(orgId!),
-    enabled: !!orgId
+    enabled: !!orgId,
   });
 
   const removeMutation = useMutation({
-    mutationFn: (userId: string) =>
-      removeMemberApi(orgId!, userId),
+    mutationFn: (userId: string) => removeMemberApi(orgId!, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", orgId] });
-    }
+    },
   });
 
   if (!orgId) {
@@ -51,7 +52,7 @@ export default function MembersPage() {
               {m.role}
             </span>
 
-            {m.role !== "OWNER" && (
+            {perms?.removeMembers && m.role !== "OWNER" && (
               <button
                 onClick={() => {
                   if (confirm("Remove this member?")) {

@@ -13,15 +13,19 @@ export const useActivityRealtime = (orgId?: string | null) => {
 
     socket.emit("joinRoom", room);
 
-    socket.on("activity:created", () => {
-      queryClient.invalidateQueries({
-        queryKey: ["activity", orgId]
-      });
-    });
+    const handler = (activity: any) => {
+      queryClient.setQueryData(
+        ["activity", orgId],
+        (old: any[] | undefined) =>
+          old ? [activity, ...old].slice(0, 100) : [activity]
+      );
+    };
+
+    socket.on("activity:new", handler);
 
     return () => {
       socket.emit("leaveRoom", room);
-      socket.off("activity:created");
+      socket.off("activity:new", handler);
     };
   }, [orgId, queryClient]);
 };

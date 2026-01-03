@@ -5,12 +5,14 @@ import OrgSelector from "../components/dashboard/OrgSelector";
 import NotificationBell from "../../components/NotificationBell";
 import { useNotificationRealtime } from "../../hooks/useNotificationRealtime";
 import ActivityFeed from "../org/ActivityFeed";
+import { useOrgPermissions } from "../../hooks/useOrgPermissions";
 
 export default function DashboardLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const orgId = useOrgStore((s) => s.orgId);
   useNotificationRealtime();
+  const perms = useOrgPermissions();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
@@ -37,6 +39,13 @@ export default function DashboardLayout() {
               >
                 Invites
               </Link>
+
+             {perms?.inviteMembers && <Link
+                to="/app/org/invite"
+                className="text-slate-400 hover:text-slate-200"
+              >
+                Add Member
+              </Link>}
 
               <Link
                 to="/app/org/members"

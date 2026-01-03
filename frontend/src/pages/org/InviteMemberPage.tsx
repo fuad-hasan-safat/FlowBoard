@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useOrgStore } from "../../store/org.store";
 import axiosClient from "../../api/axiosClient";
+import { useOrgPermissions } from "../../hooks/useOrgPermissions";
 
 export default function InviteMemberPage() {
   const orgId = useOrgStore((s) => s.orgId);
   const [email, setEmail] = useState("");
+  const perms = useOrgPermissions();
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
@@ -14,8 +16,10 @@ export default function InviteMemberPage() {
     onSuccess: () => {
       setEmail("");
       alert("Invitation sent");
-    }
+    },
   });
+
+
 
   if (!orgId) {
     return (
@@ -23,6 +27,14 @@ export default function InviteMemberPage() {
         Select an organization first.
       </div>
     );
+  }
+
+  if(!perms?.inviteMembers){
+    return (
+      <div>
+        <h3>You are not allowed, only owner can Invite</h3>
+      </div>
+    )
   }
 
   return (
