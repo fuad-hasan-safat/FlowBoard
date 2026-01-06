@@ -3,6 +3,7 @@ import { Task } from "../../models/Task";
 import { Project } from "../../models/Project";
 import { CreateTaskInput, UpdateTaskInput } from "./task.schema";
 import { getIO } from "../../socket";
+import { logActivity } from "../../utils/activityLogger";
 
 const getRoom = (orgId: string, projectId: string) =>
   `org:${orgId}:project:${projectId}`;
@@ -26,7 +27,7 @@ export const createTask = async (
     description: data.description,
     status: data.status,
     priority: data.priority,
-    createdBy: new Types.ObjectId(userId)
+    createdBy: new Types.ObjectId(userId),
   };
 
   if (data.assigneeId) {
@@ -43,13 +44,19 @@ export const createTask = async (
   const io = getIO();
   io.to(getRoom(orgId, projectId)).emit("task:created", task);
 
+  await logActivity({
+    orgId,
+    projectId,
+    taskId: task?._id.toString(),
+    actorId: userId,
+    type: "TASK_CREATED",
+    meta: { title: task.title },
+  });
+
   return task;
 };
 
-export const listTasksForProject = async (
-  orgId: string,
-  projectId: string
-) => {
+export const listTasksForProject = async (orgId: string, projectId: string) => {
   const project = await Project.findOne({ _id: projectId, orgId });
   if (!project) {
     throw new Error("Project not found in this organization");
@@ -75,6 +82,7 @@ export const updateTask = async (
   orgId: string,
   projectId: string,
   taskId: string,
+  userId: string,
   data: UpdateTaskInput
 ) => {
   const update: any = { ...data };
@@ -105,18 +113,28 @@ export const updateTask = async (
   const io = getIO();
   io.to(getRoom(orgId, projectId)).emit("task:updated", task);
 
+  await logActivity({
+    orgId,
+    projectId,
+    taskId,
+    actorId: userId,
+    type: "TASK_UPDATED",
+    meta: data,
+  });
+
   return task;
 };
 
 export const deleteTask = async (
   orgId: string,
   projectId: string,
-  taskId: string
+  taskId: string,
+  userId: string,
 ) => {
   const task = await Task.findOneAndDelete({
     _id: taskId,
     orgId,
-    projectId
+    projectId,
   });
 
   if (!task) {
@@ -126,7 +144,15 @@ export const deleteTask = async (
   // 🔴 Emit realtime event
   const io = getIO();
   io.to(getRoom(orgId, projectId)).emit("task:deleted", {
-    taskId: task._id.toString()
+    taskId: task._id.toString(),
+  });
+
+  await logActivity({
+    orgId,
+    projectId,
+    taskId,
+    actorId: userId,
+    type: "TASK_DELETED",
   });
 
   return task;

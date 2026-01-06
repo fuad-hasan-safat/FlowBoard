@@ -1,18 +1,23 @@
-import { io, type Socket } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
 
-export const initSocket = (token: string): Socket => {
+export const getSocket = () => {
   if (!socket) {
     socket = io("http://localhost:5000", {
-      transports: ["websocket"], // 🔴 force websocket
       auth: {
-        token
-      }
+        token: localStorage.getItem("accessToken")
+      },
+      transports: ["websocket"],
+      autoConnect: true
     });
 
     socket.on("connect", () => {
-      console.log("✅ frontend socket connected:", socket?.id);
+      console.log("✅ frontend socket connected:", socket!.id);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("❌ frontend socket disconnected");
     });
 
     socket.on("connect_error", (err) => {
@@ -21,9 +26,4 @@ export const initSocket = (token: string): Socket => {
   }
 
   return socket;
-};
-
-export const disconnectSocket = () => {
-  socket?.disconnect();
-  socket = null;
 };

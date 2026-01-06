@@ -25,5 +25,6 @@ const orgMemberSchema = new Schema<IOrgMember>(
 );
 
 orgMemberSchema.index({ orgId: 1, userId: 1 }, { unique: true });
+orgMemberSchema.index({ userId: 1 });
 
 export const OrgMember = model<IOrgMember>("OrgMember", orgMemberSchema);

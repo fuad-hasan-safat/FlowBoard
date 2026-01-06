@@ -1,19 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {type FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { createOrgApi, fetchOrgsApi } from "../../../api/orgApi";
 import { useOrgStore } from "../../../store/org.store";
 
 export default function OrgSelector() {
+  const queryClient = useQueryClient();
+
   const { data: orgs, isLoading } = useQuery({
     queryKey: ["orgs"],
     queryFn: fetchOrgsApi
   });
 
+  // ✅ NEW STORE API
   const orgId = useOrgStore((s) => s.orgId);
-  const setOrgId = useOrgStore((s) => s.setOrgId);
+  const setOrg = useOrgStore((s) => s.setOrg);
 
   const [newOrgName, setNewOrgName] = useState("");
-  const queryClient = useQueryClient();
 
   const { mutate: createOrg, isPending } = useMutation({
     mutationFn: createOrgApi,
@@ -38,7 +40,15 @@ export default function OrgSelector() {
       <select
         className="bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-md px-2 py-1"
         value={orgId ?? ""}
-        onChange={(e) => setOrgId(e.target.value || null)}
+        onChange={(e) => {
+          const selectedOrg = orgs?.find(
+            (o) => o.orgId === e.target.value
+          );
+          if (!selectedOrg) return;
+
+          // ✅ CRITICAL FIX
+          setOrg(selectedOrg.orgId, selectedOrg.role);
+        }}
       >
         <option value="">Select organization</option>
         {orgs?.map((org) => (

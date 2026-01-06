@@ -19,4 +19,6 @@ const organizationSchema = new Schema<IOrganization>(
   }
 );
 
+organizationSchema.index({ ownerId: 1 });
+
 export const Organization = model<IOrganization>("Organization", organizationSchema);

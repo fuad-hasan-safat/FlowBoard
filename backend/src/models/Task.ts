@@ -1,23 +1,10 @@
-import { Schema, model, Document, Types } from "mongoose";
+import { Schema, model, Document, Types, ObjectId, InferSchemaType, HydratedDocument } from "mongoose";
 
 export type TaskStatus = "BACKLOG" | "IN_PROGRESS" | "REVIEW" | "DONE";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
-export interface ITask extends Document {
-  orgId: Types.ObjectId;
-  projectId: Types.ObjectId;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  assignee?: Types.ObjectId | null;
-  createdBy: Types.ObjectId;
-  dueDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
-const taskSchema = new Schema<ITask>(
+const taskSchema = new Schema(
   {
     orgId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true, index: true },
@@ -37,13 +24,20 @@ const taskSchema = new Schema<ITask>(
     },
     assignee: { type: Schema.Types.ObjectId, ref: "User", default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    dueDate: { type: Date }
+    dueDate: { type: Date, default: null }
   },
   {
     timestamps: true
   }
 );
 
+taskSchema.index({ orgId: 1, projectId: 1 });
 taskSchema.index({ projectId: 1, status: 1 });
+taskSchema.index({ assignee: 1 });
 
-export const Task = model<ITask>("Task", taskSchema);
+export type TaskType = InferSchemaType<typeof taskSchema>;
+export type TaskDocument = HydratedDocument<TaskType>;
+
+export const Task = model<TaskType>("Task", taskSchema);
+
+

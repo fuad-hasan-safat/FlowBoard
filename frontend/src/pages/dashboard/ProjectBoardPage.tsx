@@ -7,23 +7,24 @@ import {
   createTaskApi,
   updateTaskStatusApi,
   type Task,
-  type TaskStatus
+  type TaskStatus,
 } from "../../api/taskApi";
 import {
   DragDropContext,
   Droppable,
   Draggable,
-  type DropResult
+  type DropResult,
 } from "@hello-pangea/dnd";
 import { useMemo, useState, type FormEvent } from "react";
 import TaskModal from "../../components/TaskModal";
-import useTaskRealtime from "../../hooks/useTaskRealtime"; // 🔴 NEW
+import { useTaskRealtime } from "../../hooks/useTaskRealtime";
+import { useProjectRoom } from "../../hooks/useProjectRoom";
 
 const STATUS_COLUMNS: { id: TaskStatus; title: string }[] = [
   { id: "BACKLOG", title: "Backlog" },
   { id: "IN_PROGRESS", title: "In Progress" },
   { id: "REVIEW", title: "Review" },
-  { id: "DONE", title: "Done" }
+  { id: "DONE", title: "Done" },
 ];
 
 export default function ProjectBoardPage() {
@@ -32,6 +33,7 @@ export default function ProjectBoardPage() {
   const queryClient = useQueryClient();
 
   // 🔴 Enable realtime sync
+  useProjectRoom(orgId, projectId);
   useTaskRealtime(orgId, projectId);
 
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -43,17 +45,17 @@ export default function ProjectBoardPage() {
   const {
     data: project,
     isLoading: projectLoading,
-    error: projectError
+    error: projectError,
   } = useQuery({
     queryKey: ["project", orgId, projectId],
     queryFn: () => fetchProjectApi(orgId!, projectId!),
-    enabled: Boolean(orgId && projectId)
+    enabled: Boolean(orgId && projectId),
   });
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
     queryKey: ["tasks", orgId, projectId],
     queryFn: () => fetchTasksApi(orgId!, projectId!),
-    enabled: Boolean(orgId && projectId)
+    enabled: Boolean(orgId && projectId),
   });
 
   const { mutate: createTask, isPending: creatingTask } = useMutation({
@@ -62,13 +64,13 @@ export default function ProjectBoardPage() {
         title: data.title,
         description: data.description,
         status: "BACKLOG",
-        priority: "MEDIUM"
+        priority: "MEDIUM",
       }),
     onSuccess: () => {
       setNewTaskTitle("");
       setNewTaskDesc("");
       queryClient.invalidateQueries({ queryKey: ["tasks", orgId, projectId] });
-    }
+    },
   });
 
   const { mutate: moveTask } = useMutation({
@@ -76,7 +78,7 @@ export default function ProjectBoardPage() {
       updateTaskStatusApi(orgId!, projectId!, payload.taskId, payload.status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", orgId, projectId] });
-    }
+    },
   });
 
   const tasksByStatus = useMemo(() => {
@@ -84,7 +86,7 @@ export default function ProjectBoardPage() {
       BACKLOG: [],
       IN_PROGRESS: [],
       REVIEW: [],
-      DONE: []
+      DONE: [],
     };
 
     (tasks ?? []).forEach((t) => {
@@ -95,7 +97,9 @@ export default function ProjectBoardPage() {
   }, [tasks]);
 
   if (!orgId) {
-    return <div className="text-sm text-slate-300">No organization selected.</div>;
+    return (
+      <div className="text-sm text-slate-300">No organization selected.</div>
+    );
   }
 
   if (!projectId) {
@@ -108,7 +112,7 @@ export default function ProjectBoardPage() {
 
     createTask({
       title: newTaskTitle.trim(),
-      description: newTaskDesc.trim() || undefined
+      description: newTaskDesc.trim() || undefined,
     });
   };
 
@@ -147,9 +151,7 @@ export default function ProjectBoardPage() {
           </h1>
 
           {project?.description && (
-            <p className="text-sm text-slate-400 mt-1">
-              {project.description}
-            </p>
+            <p className="text-sm text-slate-400 mt-1">{project.description}</p>
           )}
         </div>
 

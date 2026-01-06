@@ -7,8 +7,8 @@ export const initSocket = (server: any) => {
   io = new IOServer(server, {
     cors: {
       origin: true, // restrict in production
-      methods: ["GET", "POST"]
-    }
+      methods: ["GET", "POST"],
+    },
   });
 
   // 🔐 Socket auth middleware
@@ -34,6 +34,15 @@ export const initSocket = (server: any) => {
   io.on("connection", (socket: Socket) => {
     const user = (socket as any).user;
     console.log(`🔌 socket connected: ${socket.id}, user: ${user.userId}`);
+
+  socket.join(`user:${user.userId}`);
+
+  console.log(
+    "🔔 user room joined:",
+    `user:${user.userId}`,
+    "socket:",
+    socket.id
+  );
 
     socket.on("joinRoom", (room: string) => {
       console.log("JOIN ROOM (server):", room, "SOCKET:", socket.id);

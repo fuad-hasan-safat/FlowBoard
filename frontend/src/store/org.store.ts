@@ -1,11 +1,28 @@
 import { create } from "zustand";
 
-interface OrgState {
+export type OrgRole = "OWNER" | "MEMBER"| "ADMIN";
+
+type OrgState = {
   orgId: string | null;
-  setOrgId: (id: string | null) => void;
-}
+  role: OrgRole | null;
+
+  setOrg: (orgId: string, role: OrgRole) => void;
+  clearOrg: () => void;
+};
 
 export const useOrgStore = create<OrgState>((set) => ({
   orgId: null,
-  setOrgId: (id) => set({ orgId: id })
+  role: null,
+
+  setOrg: (orgId, role) =>
+    set({
+      orgId,
+      role,
+    }),
+
+  clearOrg: () =>
+    set({
+      orgId: null,
+      role: null,
+    }),
 }));

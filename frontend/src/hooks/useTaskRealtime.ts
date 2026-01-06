@@ -1,54 +1,32 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Task } from "../api/taskApi";
-import { initSocket } from "../lib/socket";
+import { getSocket } from "../lib/socket";
 
-export default function useTaskRealtime(
+export const useTaskRealtime = (
   orgId?: string | null,
   projectId?: string | null
-) {
+) => {
   const queryClient = useQueryClient();
+
   useEffect(() => {
     if (!orgId || !projectId) return;
 
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
+    const socket = getSocket();
 
-    const socket = initSocket(token);
-    const room = `org:${orgId}:project:${projectId}`;
-    const queryKey = ["tasks", orgId, projectId];
-
-    // 🔴 ALWAYS join room
-    socket.emit("joinRoom", room);
-    console.log("CLIENT JOIN ROOM:", room);
-
-    const onCreated = (task: any) => {
-      queryClient.setQueryData(queryKey, (old: any[]) =>
-        old?.some((t) => t._id === task._id) ? old : [...(old ?? []), task]
-      );
+    const invalidate = () => {
+      queryClient.invalidateQueries({
+        queryKey: ["tasks", orgId, projectId],
+      });
     };
 
-    const onUpdated = (task: any) => {
-      queryClient.setQueryData(queryKey, (old: any[]) =>
-        old?.map((t) => (t._id === task._id ? task : t))
-      );
-    };
-
-    const onDeleted = ({ taskId }: { taskId: string }) => {
-      queryClient.setQueryData(queryKey, (old: any[]) =>
-        old?.filter((t) => t._id !== taskId)
-      );
-    };
-
-    socket.on("task:created", onCreated);
-    socket.on("task:updated", onUpdated);
-    socket.on("task:deleted", onDeleted);
+    socket.on("task:created", invalidate);
+    socket.on("task:updated", invalidate);
+    socket.on("task:deleted", invalidate);
 
     return () => {
-      socket.emit("leaveRoom", room);
-      socket.off("task:created", onCreated);
-      socket.off("task:updated", onUpdated);
-      socket.off("task:deleted", onDeleted);
+      socket.off("task:created", invalidate);
+      socket.off("task:updated", invalidate);
+      socket.off("task:deleted", invalidate);
     };
   }, [orgId, projectId, queryClient]);
-}
+};
